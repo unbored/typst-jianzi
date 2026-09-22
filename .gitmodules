@@ -1,0 +1,4 @@
+[submodule "JianziNote"]
+	path = JianziNote
+	url = https://github.com/unbored/JianziNote.git
+	branch = v2-cbor
