@@ -1,0 +1,4 @@
+# Generated/package artifacts. They are assembled locally or by the release
+# pipeline and are not committed to the source repository for now.
+/assets/jianzinote.wasm
+/assets/libraries/*.cbor
