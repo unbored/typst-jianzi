@@ -1,0 +1,15 @@
+set(expected_uninitialized "instance is not initialized")
+set(expected_invalid-cbor "Invalid CBOR")
+set(expected_invalid-utf8 "UTF-8")
+set(expected_nul "NUL byte")
+set(expected_invalid-formula "missing an operand")
+set(expected_missing "missing components")
+set(expected_unknown-style "unknown style")
+set(expected_invalid-fonts "fallback-fonts must not be empty")
+set(expected_reinit "already initialized")
+execute_process(COMMAND "${TYPST}" compile --root "${ROOT}" --input "case=${CASE}"
+  "${ROOT}/tests/errors.typ" "${BUILD}/error-${CASE}.pdf"
+  RESULT_VARIABLE status OUTPUT_VARIABLE output ERROR_VARIABLE error)
+if(status EQUAL 0 OR NOT "${output}${error}" MATCHES "${expected_${CASE}}")
+  message(FATAL_ERROR "Expected ${CASE} failure; got status ${status}: ${output}${error}")
+endif()

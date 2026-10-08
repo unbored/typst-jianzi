@@ -2,3 +2,6 @@
 # pipeline and are not committed to the source repository for now.
 /assets/jianzinote.wasm
 /assets/libraries/*.cbor
+/assets/styles.typ
+/build/
+/vcpkg_installed/

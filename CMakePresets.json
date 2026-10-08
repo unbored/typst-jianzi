@@ -1,0 +1,23 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {"major": 3, "minor": 21, "patch": 0},
+  "configurePresets": [
+    {
+      "name": "wasm-release",
+      "displayName": "Typst WASM (Emscripten + vcpkg)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/wasm-release",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake",
+        "WASI_STUB_EXECUTABLE": "$env{WASI_STUB}",
+        "TYPST_EXECUTABLE": "$env{TYPST}",
+        "NODE_EXECUTABLE": "$env{EMSDK_NODE}"
+      }
+    }
+  ],
+  "buildPresets": [{"name": "wasm-release", "configurePreset": "wasm-release"}],
+  "testPresets": [{"name": "wasm-release", "configurePreset": "wasm-release", "output": {"outputOnFailure": true}}]
+}

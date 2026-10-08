@@ -1,0 +1,3 @@
+// Generated from the bundled CBOR directory by CMake. Do not edit.
+#let bundled-styles = (
+@style_names@)

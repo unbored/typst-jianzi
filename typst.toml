@@ -1,0 +1,9 @@
+[package]
+name = "jianzi"
+version = "0.1.0"
+entrypoint = "jianzi.typ"
+authors = ["King Chung"]
+license = "MIT"
+description = "Inline guqin jianzi notation powered by JianziNote."
+compiler = "0.13.0"
+exclude = ["JianziNote/", "build/", "cmake/", "wasm/", "scripts/", "tests/", "docs/", ".vscode/", ".git/", "CMakeLists.txt", "CMakePresets.json", "vcpkg.json", ".gitmodules", ".gitignore"]

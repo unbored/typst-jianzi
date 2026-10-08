@@ -1,6 +1,6 @@
 # typst-jianzi 架构设计草案
 
-> 状态：讨论稿，尚未进入实现阶段。
+> 状态：第一版已实现并完成本机验证（2026-10-08）；下文记录架构约定与后续验证范围。
 >
 > 本文记录当前共识、已确认设计和待决问题。标为“初步决定”的内容仍可在实现前修改。
 
@@ -150,9 +150,9 @@ render_natural(text_utf8: bytes) -> render_result_cbor: bytes
 
 1. 将 `text_utf8` 交给 `JianziLibrary::ParseNatural`；
 2. 将得到的公式交给 `JianziLibrary::Parse`；
-3. 调用 `RenderPath()`；
-4. 将路径序列化为完整 SVG；
-5. 根据 `JianziStatus` 返回带状态的 CBOR；`Renderable` 的 payload 为 UTF-8 SVG 字节。
+3. 先检查 `JianziStatus`，Empty、Fallback、Missing 直接编码为语义结果；
+4. 仅对 Renderable 调用 `RenderPath()`，将路径序列化为完整 SVG；
+5. 返回带状态的 CBOR；`Renderable` 的 payload 为 UTF-8 SVG 字节。
 
 建议的渲染结果结构为：
 
@@ -303,26 +303,26 @@ fallback 字体在初始化时指定：
 ```typst
 #let jianzi = init(
   style: "kai",
-  fallback-fonts: ("KaiTi", "Noto Serif CJK SC"),
+  fallback-fonts: ("STKaiti", "KaiTi"),
 )
 ```
 
-`fallback-fonts` 接受单个字体名或非空字体名数组；单个名称在内部归一化为数组。用户传入时完全替换默认列表，不与默认值隐式合并。包导出 `recommended-fallback-fonts`，并将它作为 `init` 的默认值。首版推荐列表暂定为：
+`fallback-fonts` 接受单个字体名或非空字体名数组；单个名称在内部归一化为数组。用户传入时完全替换默认列表，不与默认值隐式合并。包导出 `recommended-fallback-fonts`，并将它作为 `init` 的默认值。默认列表优先华文楷体繁体，其次华文楷体简体，最后 Windows 楷体：
 
 ```typst
 #let recommended-fallback-fonts = (
-  "FandolKai",
-  "KaiTi",
+  "Kaiti TC",
   "Kaiti SC",
   "STKaiti",
-  "Noto Serif CJK SC",
-  "Source Han Serif SC",
+  "KaiTi",
 )
 ```
 
-顺序表示优先级，前面的字体不可用或不含目标字符时才尝试后续字体。这些字体不随包附带，实际可用性取决于 Typst 运行环境；发布前应在 Windows、macOS 和常见 Linux/Typst 环境验证字体族名，再固定顺序。
+顺序表示优先级，前面的字体不可用或不含目标字符时才尝试后续字体。`Kaiti TC` 为繁体，`Kaiti SC` 为简体；Windows/Office 环境中的华文楷体以 `STKaiti` 字体族名列出，因此它同样排在 Windows 自带 `KaiTi` 之前。这些字体不随包附带，实际可用性取决于 Typst 运行环境。字体族名可参照 [Apple 字体列表](https://support.apple.com/en-ie/122869) 和 [Microsoft STKaiti 文档](https://learn.microsoft.com/en-us/typography/font-list/stkaiti)。
 
 公开 API 仅使用自然输入。减字公式本身由自然输入解析器兼容，因此不再提供单独的公式模式、布尔开关或第二个渲染函数。
+
+现有 `ParseNatural` 仅在整个输入具有完整外层括号时原样返回公式。因此公式写作 `"(大/九)"`、`"((大/九)&七)"`；裸 `"大/九"` 仍按自然字符串拼装，不作为公式。第一版保持此核心库约定。
 
 ### 7.1 内联排版目标
 
@@ -345,7 +345,7 @@ Typst 的 `image` 是块级元素，必须放进 `box` 才能嵌入段落。实�
 
 `Fallback` 不创建 SVG 或 `box`，而是返回类似 `text(font: fallback-fonts, fallback: false)[fallback-text]` 的真实文本。这样它会自然继承调用处的字号、基线、颜色和其他文字样式，同时将字体选择限定在初始化时给定的列表中。
 
-JianziNote 字库已经包含所需的 `units_per_em` 和 `baseline_y`。`baseline_y` 是原始参考字体的参数，不是根据归一化设计空间或某个减字的实际边界推导出来的值。WASM 的 `metrics()` 负责把它换算为 Typst 所需的基线比例。为此需要给 `JianziLibrary` 增加只读的度量访问接口，但不需要修改 CBOR 格式或增加字段。
+JianziNote 字库已经包含所需的 `units_per_em` 和 `baseline_y`。`baseline_y` 是原始参考字体的参数，不是根据归一化设计空间或某个减字的实际边界推导出来的值。现有 `JianziLibrary::GetLayoutMetrics()` 提供只读访问，WASM 的 `metrics()` 把它换算为 Typst 所需的基线比例，不需要修改 CBOR 格式或增加字段。
 
 ### 7.2 参考字体与设计坐标
 
@@ -361,6 +361,10 @@ JianziNote 字库已经包含所需的 `units_per_em` 和 `baseline_y`。`baseli
 归一化变换是字库内部实现细节，不能改变最终排版度量。Typst 侧也不能用减字的 tight bounding box 重新缩放或居中，否则不同减字会在同一行中产生不一致的视觉字号和基线。
 
 当前 `RenderPath()` 已按 `(point - translate) / scale` 恢复字库记录的 glyph normalization。实现阶段需要用参考字体样本验证恢复后的坐标范围，并据此修改 SVG viewBox；现有 `SvgRenderer` 固定使用 `viewBox="0 0 1 1"`，只有在恢复后的 em 坐标仍以 `0..1` 表示时才可原样复用。
+
+第一版消费的 kai 字库将原始坐标记录为 em 单位：`units_per_em=1000`、`baseline_y=860`，而 `glyph_normalization.scale≈0.969697`、`translate_y≈-0.0612121`。因此路径恢复后仍使用 em 坐标，SVG viewBox 固定为 `0 0 1 1`；字体度量则用 `baseline_y / units_per_em` 得到 0.86em 基线位置。不能将路径坐标与字体原始 units 混用，不能仅因 `units_per_em=1000` 就改为 1000 大小的 viewBox。后续风格字库也必须遵守这个坐标约定。
+
+方形字位模型要求 `0 <= baseline_y <= units_per_em`，初始化时验证这一条件。内联 SVG 能继承字号与额外基线偏移，但不参与普通 glyph 的连字、字距、字体替换等 shaping；Fallback 为真实文字，使用 Typst 原生文字度量。完整参考字体行高行为（例如 text top/bottom edge）仍需参考字体样本验证，不能仅凭 em 方框宣称所有排版行为完全相同。
 
 ## 8. SVG 输出要求
 
@@ -402,14 +406,12 @@ VCPKG_ROOT=D:\vcpkg
 WASI_STUB=D:\tools\wasi-stub\wasi-stub.exe
 ```
 
-community triplet 会把
-`$EMSCRIPTEN_ROOT/cmake/Modules/Platform/Emscripten.cmake` 设为 vcpkg 的
-chainload toolchain，因此 CMake 只应设置 vcpkg toolchain，不再同时传入第二个
-`CMAKE_TOOLCHAIN_FILE`。CMake preset 预计设置：
+community triplet 为依赖构建设定 Emscripten chainload toolchain，顶层项目还必须显式指定 `VCPKG_CHAINLOAD_TOOLCHAIN_FILE`。CMake 仍只使用 vcpkg 作为主 `CMAKE_TOOLCHAIN_FILE`，通过 chainload 加载 Emscripten。CMake preset 设置：
 
 ```text
 CMAKE_TOOLCHAIN_FILE=D:/vcpkg/scripts/buildsystems/vcpkg.cmake
 VCPKG_TARGET_TRIPLET=wasm32-emscripten
+VCPKG_CHAINLOAD_TOOLCHAIN_FILE=$EMSCRIPTEN_ROOT/cmake/Modules/Platform/Emscripten.cmake
 ```
 
 根项目应提供自己的 `vcpkg.json`，第一阶段只声明：
@@ -455,6 +457,8 @@ C++ 链接
 ```
 
 CMake 通过一个依赖原始 WASM 的 custom command 生成处理后文件，并让默认构建目标依赖该输出。`wasi-stub` 返回非零状态时整个构建失败，不得继续发布未处理的模块。原始 WASM 只保留在构建目录用于诊断，不进入 Typst 包。
+
+Emscripten 的内存增长通知 `emscripten_notify_memory_growth` 由适配层提供空实现：它只用于刷新 JavaScript 内存视图，而 Typst 不存在这类视图。第一版保留内存增长，使用 1 MiB 栈；不批量 stub `env` 模块。最终导入白名单由 `scripts/check-wasm.mjs` 自动检查，只接受 `typst_env` 的两个 minimal protocol 函数，同时拒绝异常 tag/feature。
 
 `WASI_STUB` 环境变量是本机便捷入口；CMake 内部使用可缓存的 `WASI_STUB_EXECUTABLE` 路径，并可通过 `find_program` 或 preset 设置它。如果配置阶段找不到可执行文件，CMake 应给出明确错误并停止，不生成会跳过后处理的构建。项目文件不写死 `D:\tools\wasi-stub`，以便 CI 和其他开发环境使用各自的安装位置。
 
@@ -534,6 +538,14 @@ CMake 通过一个依赖原始 WASM 的 custom command 生成处理后文件，�
 - 状态处理已经确定；
 - 最终 WASM 和 CBOR 暂不提交到 Git，由本地或发布/CI 流程组装；
 - 待正式发布方式明确后，再重新评估制品是否入库。
+
+### 12.1 第一版实施记录
+
+已落地 WASM 适配层、无异常编译、CMake/vcpkg preset、自动 wasi-stub、最终导入检查、字库风格白名单生成、Typst 包装层、示例和 CTest。vcpkg manifest 固定 baseline `58bb6778689746b6a48c2ee4a2dfdb0b70f681df`；JianziNote 使用子模块提交 `705a5fe`。Typst 0.13 支持的 `box.baseline` 是相对偏移长度，因此实现直接使用 `descent * text.size + text.baseline`，而不是新版本文档中的 baseline 字典写法。
+
+本机使用 Emscripten 6.0.10、wasi-stub 0.3.1、Typst 0.14.2，并额外验证官方 Typst 0.13.0。测试覆盖 kai 所有 21 个基础减字、自然组合、六种运算符、括号、Fallback、Missing、空输入、非法 CBOR/UTF-8/NUL/公式、未知风格、无效字体列表、重复初始化和不同 transition 实例的隔离。已检查多字号、基线偏移、fallback 颜色继承、表格内联，以及安装后的包入口。最终模块约 304 KiB，仅导入 minimal protocol 的两个函数。
+
+尚未完成的后续验证包括：Web App、非 Windows 平台、与原生渲染结果的数值对照、与参考字体文件实际度量的进一步比对，以及性能基准。首版提供的 kai 字库无别名，别名与第二种度量通过测试中派生的 CBOR 数据验证。
 
 ## 13. 参考资料
 
