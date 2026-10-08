@@ -1,10 +1,11 @@
 #import "assets/styles.typ": bundled-styles
+#import "track.typ": make-track
 
 #let recommended-fallback-fonts = (
   "Kaiti TC", "Kaiti SC", "STKaiti", "KaiTi",
 )
 
-#let init(style: "kai", fallback-fonts: recommended-fallback-fonts) = {
+#let initialize-renderer(style: "kai", fallback-fonts: recommended-fallback-fonts) = {
   assert(type(style) == str, message: "jianzi: style must be a string")
   assert(style in bundled-styles, message: "jianzi: unknown style '" + style + "'")
   let fonts = if type(fallback-fonts) == str { (fallback-fonts,) } else { fallback-fonts }
@@ -42,5 +43,16 @@
       panic("jianzi: unknown render status")
     }
   }
-  render
+  (render: render, metrics: metrics)
+}
+
+#let init(style: "kai", fallback-fonts: recommended-fallback-fonts) = {
+  initialize-renderer(style: style, fallback-fonts: fallback-fonts).render
+}
+
+// The track adapter reuses the same initialized renderer as the single-item API.
+#let init-track(style: "kai", fallback-fonts: recommended-fallback-fonts, height: 2em) = {
+  assert(type(height) == length, message: "jianzi: track height must be a length")
+  let renderer = initialize-renderer(style: style, fallback-fonts: fallback-fonts)
+  (..make-track(renderer.render, renderer.metrics.descent), height: height)
 }

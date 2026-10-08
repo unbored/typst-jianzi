@@ -45,6 +45,43 @@ git submodule update --init --recursive
 D:/tools/typst/typst.exe compile --root . examples/basic.typ build/basic.pdf
 ```
 
+## 附属 track 适配器
+
+`init-track(style: "kai", fallback-fonts: recommended-fallback-fonts, height: 2em)` 初始化单字渲染器，返回不依赖简谱包的描述字典：
+
+```typst
+#import "jianzi.typ": init-track
+#let adapter = init-track()
+```
+
+字典提供 `parse`、`render-item` 和默认 `height: 2em`，可直接注册到支持此协议的排版包：
+
+可用 `init-track(height: 1.8em)` 调整整体高度。接入 `jianpu` 时，`em` 相对于简谱字号；也可传入 `24pt` 等绝对长度。宽度随高度等比缩放，单字注释仍为普通减字的一半大小。
+
+````typst
+#let qin-score = jianpu.with(tracks: (jianzi: adapter))
+#qin-score(
+  ```melody
+  1 2 3 4 |
+  ```,
+  ```jianzi
+  大九挑七 a{琴} g1{大九,a{琴,九}} _
+  ```,
+)
+````
+
+语法约定：
+
+- 顶层以空白分隔，一项对应一个音符；`_` 跳过一个音符，独立 `|` 只帮助阅读。
+- `a{甲}` 是半高、贴底的单字注释；`a{甲,乙}` 从上到下竖排，最多四个成员。
+- `g1{甲,乙}` 横排，以第二个成员作为参考；索引从 `0` 起算，`g{甲,乙}` 等同于 `g0{甲,乙}`。
+- `a` 可嵌套在 `g` 中，其整体作为一个横向成员；其他组嵌套暂不支持。
+- 组内使用英文逗号，可在成员两侧留空白。空成员、中文逗号、组内 `_`、索引越界和括号不匹配会报错。
+
+`(adapter.parse)(source)` 返回语义数据数组，`none` 表示占位。`(adapter.render-item)(data)` 必须在 Typst context 内调用，返回 `(body: box, anchor-x: length)`；它完成 SVG/fallback 混合排版，盒高固定为内部基准 `20pt`，锚点是相对盒左缘的缩放前坐标。使用者通常只需要将适配器交给简谱包。
+
+简谱包按 `height` 缩放整个盒子及锚点。单字注释填充下半部，宽度为缩小后的实际宽度；多字注释占完整高度，竖向间隙为基准盒高的 `0.04` 倍。横向组内间隙为基准盒高的 `0.08` 倍。fallback 与 SVG 使用相同字号及 em 字位，保留原生字宽，不按笔画边界逐字放大。基础单字 `init()` 接口保持不变。
+
 ## 打包
 
 ```powershell

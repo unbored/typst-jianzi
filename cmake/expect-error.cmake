@@ -7,6 +7,13 @@ set(expected_missing "missing components")
 set(expected_unknown-style "unknown style")
 set(expected_invalid-fonts "fallback-fonts must not be empty")
 set(expected_reinit "already initialized")
+set(expected_track-five "at most four members")
+set(expected_track-reference "reference index out of range")
+set(expected_track-empty "empty group member")
+set(expected_track-comma "use ASCII commas")
+set(expected_track-unclosed "unclosed group")
+set(expected_track-nesting "annotation members must be")
+set(expected_track-placeholder "placeholders are only allowed at top level")
 execute_process(COMMAND "${TYPST}" compile --root "${ROOT}" --input "case=${CASE}"
   "${ROOT}/tests/errors.typ" "${BUILD}/error-${CASE}.pdf"
   RESULT_VARIABLE status OUTPUT_VARIABLE output ERROR_VARIABLE error)

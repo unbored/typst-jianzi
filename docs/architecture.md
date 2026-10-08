@@ -35,7 +35,7 @@ SVG 输出适配层
 Typst image
 ```
 
-本包只解决“在 Typst 文档中生成并排版单个减字”的问题。减字作为内联对象，与普通文字共同参与段落排版。琴谱级布局、连接线、节奏和整页排版不属于本项目范围。
+基础接口解决“在 Typst 文档中生成并排版单个减字”的问题。减字作为内联对象，与普通文字共同参与段落排版。另提供不依赖具体谱面包的 track 适配器，负责减字内部的注释与横向组合；琴谱级布局、连接线、节奏和整页排版仍由调用方负责。
 
 ## 2. 设计原则
 
@@ -365,6 +365,16 @@ JianziNote 字库已经包含所需的 `units_per_em` 和 `baseline_y`。`baseli
 第一版消费的 kai 字库将原始坐标记录为 em 单位：`units_per_em=1000`、`baseline_y=860`，而 `glyph_normalization.scale≈0.969697`、`translate_y≈-0.0612121`。因此路径恢复后仍使用 em 坐标，SVG viewBox 固定为 `0 0 1 1`；字体度量则用 `baseline_y / units_per_em` 得到 0.86em 基线位置。不能将路径坐标与字体原始 units 混用，不能仅因 `units_per_em=1000` 就改为 1000 大小的 viewBox。后续风格字库也必须遵守这个坐标约定。
 
 方形字位模型要求 `0 <= baseline_y <= units_per_em`，初始化时验证这一条件。内联 SVG 能继承字号与额外基线偏移，但不参与普通 glyph 的连字、字距、字体替换等 shaping；Fallback 为真实文字，使用 Typst 原生文字度量。完整参考字体行高行为（例如 text top/bottom edge）仍需参考字体样本验证，不能仅凭 em 方框宣称所有排版行为完全相同。
+
+### 7.2 Track 适配器实施记录（2026-10-08）
+
+`init-track()` 复用同一单字渲染器，返回 `(parse: function, render-item: function, height: 2em)`。`track.typ` 解析整段 raw，按顶层空白划分项，`_` 为占位；`a{...}` 竖排最多四个注释成员，`gN{...}` 横排并按零起算索引指定参考成员，`g{...}` 等同于 `g0{...}`。只支持 `a` 嵌套于 `g`，分隔符为 ASCII 逗号。
+
+`parse` 返回语义数据数组，`render-item` 在 Typst context 中返回 `(body: box, anchor-x: length)`。所有整体盒高固定为内部基准 `20pt`；单字注释占下半部并贴底，多字注释组占完整盒高。横向组按实际成员宽度计算参考中心。注释组内间隙为盒高 `0.04` 倍，横向组间隙为盒高 `0.08` 倍。
+
+基础 renderer 的 SVG 与真实文字 fallback 均被复用：两者使用相同字号及字库提供的 ascent/descent 字位，fallback 保留原生字宽，不按每个字符的笔画高度放大。Typst 的数值 bottom-edge 使用负 descent，使普通成员盒高为完整 1em。组合器不假定全部成员都是图片或全角字符。所有缩放均影响实际占位，基线不作为组合底边对齐标准。调用方按目标高度缩放整个盒子及锚点，不向适配器传入简谱字号。
+
+适配器只提供单项内部组合，不依赖 `jianpu`。简谱侧负责主音符位置、相邻项避让、行高及分行。打包时 `track.typ` 与入口一起安装；`tests/track.typ` 和原有错误测试覆盖组合与语法验证。
 
 ## 8. SVG 输出要求
 

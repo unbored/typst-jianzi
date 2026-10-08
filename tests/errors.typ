@@ -1,8 +1,20 @@
-#import "../jianzi.typ": init
+#import "../jianzi.typ": init, init-track
 #let case = sys.inputs.at("case")
 #let base = plugin("../assets/jianzinote.wasm")
 #let library = read("../assets/libraries/kai.cbor", encoding: none)
-#if case == "uninitialized" {
+#let track-cases = (
+  track-five: "a{大,九,大,九,大}",
+  track-reference: "g2{大,九}",
+  track-empty: "a{大,}",
+  track-comma: "g{大，九}",
+  track-unclosed: "g{大,a{九}",
+  track-nesting: "a{g{大,九}}",
+  track-placeholder: "g{大,_}",
+)
+#if case in track-cases {
+  let adapter = init-track()
+  (adapter.parse)(track-cases.at(case))
+} else if case == "uninitialized" {
   base.metrics()
 } else if case == "invalid-cbor" {
   plugin.transition(base.init, bytes((255,)))

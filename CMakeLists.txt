@@ -54,18 +54,19 @@ add_custom_target(jianzi-assets ALL DEPENDS ${staged_libraries})
 option(JIANZI_BUILD_TESTS "Enable Typst integration tests" ON)
 if(JIANZI_BUILD_TESTS AND TYPST_EXECUTABLE)
   enable_testing()
-  foreach(test IN ITEMS abi smoke nine-grid)
+  foreach(test IN ITEMS abi smoke nine-grid track)
     add_test(NAME ${test} COMMAND "${TYPST_EXECUTABLE}" compile --root "${CMAKE_SOURCE_DIR}"
       "${CMAKE_SOURCE_DIR}/tests/${test}.typ" "${CMAKE_BINARY_DIR}/${test}.pdf")
   endforeach()
-  foreach(case IN ITEMS uninitialized invalid-cbor invalid-utf8 nul invalid-formula missing unknown-style invalid-fonts reinit)
+  foreach(case IN ITEMS uninitialized invalid-cbor invalid-utf8 nul invalid-formula missing unknown-style invalid-fonts reinit
+      track-five track-reference track-empty track-comma track-unclosed track-nesting track-placeholder)
     add_test(NAME error-${case} COMMAND ${CMAKE_COMMAND}
       "-DTYPST=${TYPST_EXECUTABLE}" "-DROOT=${CMAKE_SOURCE_DIR}" "-DBUILD=${CMAKE_BINARY_DIR}"
       "-DCASE=${case}" -P "${CMAKE_SOURCE_DIR}/cmake/expect-error.cmake")
   endforeach()
 endif()
 
-install(FILES jianzi.typ typst.toml README.md LICENSE DESTINATION .)
+install(FILES jianzi.typ track.typ typst.toml README.md LICENSE DESTINATION .)
 install(FILES assets/styles.typ assets/jianzinote.wasm DESTINATION assets)
 foreach(library IN LISTS libraries)
   install(FILES "${library}" DESTINATION assets/libraries)
