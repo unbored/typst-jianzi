@@ -28,7 +28,23 @@
     } else if result.status == "fallback" {
       text(font: fonts, fallback: false, result.text)
     } else if result.status == "missing" {
-      panic("jianzi: missing components: " + result.names.join(", "))
+      context {
+        let em = text.size
+        let stroke = 0.04em
+        let warning = "[jianzi warning] " + input + ": missing components: " + result.names.join(", ")
+        box(width: metrics.advance * em, height: em,
+          baseline: metrics.descent * em + text.baseline)[
+          // Typst has no custom warning hook; an empty font probe emits a
+          // non-fatal diagnostic without adding visible text or box width.
+          #text(font: warning, "")
+          #place(top + left, dx: stroke / 2, dy: stroke / 2,
+            rect(width: em - stroke, height: em - stroke, stroke: stroke))
+          #place(top + left, dx: 0.2em, dy: 0.2em,
+            line(end: (0.6em, 0.6em), stroke: stroke))
+          #place(top + left, dx: 0.2em, dy: 0.8em,
+            line(end: (0.6em, -0.6em), stroke: stroke))
+        ]
+      }
     } else if result.status == "renderable" {
       context {
         let em = text.size

@@ -16,6 +16,8 @@
 
 Fallback：#text(fill: red)[#jianzi("琴")]；空输入：甲#jianzi("")乙。
 
+缺失组件（占位后继续）：#jianzi("大龘") #jianzi("大九")。
+
 #table(
   columns: 3,
   [自然输入], [公式兼容], [Fallback],
@@ -26,6 +28,8 @@ Fallback：#text(fill: red)[#jianzi("琴")]；空输入：甲#jianzi("")乙。
   assert.eq(measure(jianzi("大九")).width, text.size)
   assert.eq(measure(jianzi("大九")).height, text.size)
   assert.eq(measure(jianzi("")).width, 0pt)
+  assert.eq(measure(jianzi("大龘")).width, text.size)
+  assert.eq(measure(jianzi("大龘")).height, text.size)
 }
 #text(size: 1.5em)[#context {
   assert.eq(measure(jianzi("大九")).width, text.size)

@@ -37,7 +37,7 @@ git submodule update --init --recursive
 
 公式兼容遵循 JianziNote 自然解析器的约定：整个输入用一对外层括号包住，例如 `"(大/九)"`；没有完整外层括号的字符串按自然输入处理。
 
-渲染函数只接收一个字符串：空输入返回 `none`；可渲染减字返回一个随当前字号缩放的方形 inline box；单个未知字符用配置字体显示普通文本；组合中的未知部分报错并列出名称。减字采用参考字体的固定基线和 1em 字位，用户调整使用普通的 `text(size: ...)` 和 `text(baseline: ...)`。SVG 为黑色，fallback 文本会继承文字颜色。内联图片不参与字体连字、字距等 shaping。
+渲染函数只接收一个字符串：空输入返回 `none`；可渲染减字返回一个随当前字号缩放的方形 inline box；单个未知字符用配置字体显示普通文本；组合中的未知部分返回方框带叉的 1em 占位盒，并输出含原始输入和缺失名称的非致命 warning。减字采用参考字体的固定基线和 1em 字位，用户调整使用普通的 `text(size: ...)` 和 `text(baseline: ...)`。SVG 为黑色，fallback 文本会继承文字颜色。内联图片不参与字体连字、字距等 shaping。
 
 编译示例：
 
@@ -46,6 +46,8 @@ D:/tools/typst/typst.exe compile --root . examples/basic.typ build/basic.pdf
 ```
 
 ## 附属 track 适配器
+
+Typst 暂无原生自定义 warning 接口，缺失组件的提醒通过空文本的不存在字体诊断实现，因此控制台会带有 `unknown font family: [jianzi warning] ...` 前缀。这不会阻止生成文档，也不依赖用户安装某种占位字体；方框和叉均使用矢量线条绘制。此容错仅针对 `missing` 状态，解析错误、无效配置及 WASM 调用失败仍会报错。
 
 `init-track(style: "kai", fallback-fonts: recommended-fallback-fonts, height: 2em)` 初始化单字渲染器，返回不依赖简谱包的描述字典：
 
@@ -65,7 +67,7 @@ D:/tools/typst/typst.exe compile --root . examples/basic.typ build/basic.pdf
   1 2 3 4 |
   ```,
   ```jianzi
-  大九挑七 a{琴} g1{大九,a{琴,九}} _
+  大九挑七 a[琴] g1[大九,a[琴,九]] _
   ```,
 )
 ````
@@ -73,8 +75,8 @@ D:/tools/typst/typst.exe compile --root . examples/basic.typ build/basic.pdf
 语法约定：
 
 - 顶层以空白分隔，一项对应一个音符；`_` 跳过一个音符，独立 `|` 只帮助阅读。
-- `a{甲}` 是半高、贴底的单字注释；`a{甲,乙}` 从上到下竖排，最多四个成员。
-- `g1{甲,乙}` 横排，以第二个成员作为参考；索引从 `0` 起算，`g{甲,乙}` 等同于 `g0{甲,乙}`。
+- `a[甲]` 是半高、贴底的单字注释；`a[甲,乙]` 从上到下竖排，最多四个成员。
+- `g1[甲,乙]` 横排，以第二个成员作为参考；索引从 `0` 起算，`g[甲,乙]` 等同于 `g0[甲,乙]`。
 - `a` 可嵌套在 `g` 中，其整体作为一个横向成员；其他组嵌套暂不支持。
 - 组内使用英文逗号，可在成员两侧留空白。空成员、中文逗号、组内 `_`、索引越界和括号不匹配会报错。
 

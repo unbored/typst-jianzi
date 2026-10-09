@@ -58,8 +58,8 @@ if(JIANZI_BUILD_TESTS AND TYPST_EXECUTABLE)
     add_test(NAME ${test} COMMAND "${TYPST_EXECUTABLE}" compile --root "${CMAKE_SOURCE_DIR}"
       "${CMAKE_SOURCE_DIR}/tests/${test}.typ" "${CMAKE_BINARY_DIR}/${test}.pdf")
   endforeach()
-  foreach(case IN ITEMS uninitialized invalid-cbor invalid-utf8 nul invalid-formula missing unknown-style invalid-fonts reinit
-      track-five track-reference track-empty track-comma track-unclosed track-nesting track-placeholder)
+  foreach(case IN ITEMS uninitialized invalid-cbor invalid-utf8 nul invalid-formula unknown-style invalid-fonts reinit
+      track-five track-reference track-empty track-comma track-unclosed track-nesting track-placeholder track-old-braces)
     add_test(NAME error-${case} COMMAND ${CMAKE_COMMAND}
       "-DTYPST=${TYPST_EXECUTABLE}" "-DROOT=${CMAKE_SOURCE_DIR}" "-DBUILD=${CMAKE_BINARY_DIR}"
       "-DCASE=${case}" -P "${CMAKE_SOURCE_DIR}/cmake/expect-error.cmake")

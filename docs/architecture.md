@@ -170,7 +170,7 @@ Typst 包装层对四种状态做固定处理：
 - `Empty`：返回 `none`；
 - `Renderable`：按参考字体度量返回内联 SVG；
 - `Fallback`：将 `text` 作为普通 Typst 文本，使用 `init` 时配置的 fallback 字体渲染；
-- `Missing`：报错并列出 `names` 中无法生成的组成部分。
+- `Missing`：Typst 渲染层输出 warning 并绘制方框带叉的 1em 占位盒；保留参考字体基线，继续编译。底层 ABI 仍返回缺失名称。
 
 fallback 字体是 Typst 排版配置，不进入 WASM 状态或 ABI。WASM 只返回需要 fallback 的原字符文本。
 
@@ -368,7 +368,7 @@ JianziNote 字库已经包含所需的 `units_per_em` 和 `baseline_y`。`baseli
 
 ### 7.2 Track 适配器实施记录（2026-10-08）
 
-`init-track()` 复用同一单字渲染器，返回 `(parse: function, render-item: function, height: 2em)`。`track.typ` 解析整段 raw，按顶层空白划分项，`_` 为占位；`a{...}` 竖排最多四个注释成员，`gN{...}` 横排并按零起算索引指定参考成员，`g{...}` 等同于 `g0{...}`。只支持 `a` 嵌套于 `g`，分隔符为 ASCII 逗号。
+`init-track()` 复用同一单字渲染器，返回 `(parse: function, render-item: function, height: 2em)`。`track.typ` 解析整段 raw，按顶层空白划分项，`_` 为占位；`a[...]` 竖排最多四个注释成员，`gN[...]` 横排并按零起算索引指定参考成员，`g[...]` 等同于 `g0[...]`。只支持 `a` 嵌套于 `g`，分隔符为 ASCII 逗号。
 
 `parse` 返回语义数据数组，`render-item` 在 Typst context 中返回 `(body: box, anchor-x: length)`。所有整体盒高固定为内部基准 `20pt`；单字注释占下半部并贴底，多字注释组占完整盒高。横向组按实际成员宽度计算参考中心。注释组内间隙为盒高 `0.04` 倍，横向组间隙为盒高 `0.08` 倍。
 

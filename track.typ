@@ -4,18 +4,18 @@
   let source = source.trim()
   assert(source != "", message: "jianzi track: empty group member")
   assert(not source.contains("，"), message: "jianzi track: use ASCII commas")
-  if source.starts-with("a{") or source.match(regex("^g[0-9]*\\{")) != none {
-    assert(source.ends-with("}"), message: "jianzi track: unclosed group")
-    let opening = source.position("{")
+  if source.starts-with("a[") or source.match(regex("^g[0-9]*\\[")) != none {
+    assert(source.ends-with("]"), message: "jianzi track: unclosed group")
+    let opening = source.position("[")
     let prefix = source.slice(0, opening)
     let inner = source.slice(opening + 1, source.len() - 1)
     let members = ()
     let buffer = ""
     let depth = 0
     for character in inner.clusters() {
-      if character == "{" { depth += 1 }
-      if character == "}" { depth -= 1 }
-      assert(depth >= 0, message: "jianzi track: unmatched closing brace")
+      if character == "[" { depth += 1 }
+      if character == "]" { depth -= 1 }
+      assert(depth >= 0, message: "jianzi track: unmatched closing bracket")
       if character == "," and depth == 0 {
         members.push(parse-member(buffer))
         buffer = ""
@@ -36,7 +36,7 @@
       (kind: "horizontal", members: members, reference: reference)
     }
   } else {
-    assert(not source.contains(regex("[{},\\s]")), message: "jianzi track: invalid member syntax")
+    assert(not source.contains(regex("[\\[\\]{},\\s]")), message: "jianzi track: invalid member syntax")
     assert(source != "_" and source != "|", message: "jianzi track: placeholders are only allowed at top level")
     (kind: "normal", text: source)
   }
@@ -48,9 +48,9 @@
   let buffer = ""
   let depth = 0
   for character in source.clusters() {
-    if character == "{" { depth += 1 }
-    if character == "}" { depth -= 1 }
-    assert(depth >= 0, message: "jianzi track: unmatched closing brace")
+    if character == "[" { depth += 1 }
+    if character == "]" { depth -= 1 }
+    assert(depth >= 0, message: "jianzi track: unmatched closing bracket")
     if character.contains(regex("\\s")) and depth == 0 {
       if buffer != "" { tokens.push(buffer); buffer = "" }
     } else { buffer += character }

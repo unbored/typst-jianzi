@@ -3,13 +3,14 @@
 #let base = plugin("../assets/jianzinote.wasm")
 #let library = read("../assets/libraries/kai.cbor", encoding: none)
 #let track-cases = (
-  track-five: "a{大,九,大,九,大}",
-  track-reference: "g2{大,九}",
-  track-empty: "a{大,}",
-  track-comma: "g{大，九}",
-  track-unclosed: "g{大,a{九}",
-  track-nesting: "a{g{大,九}}",
-  track-placeholder: "g{大,_}",
+  track-five: "a[大,九,大,九,大]",
+  track-reference: "g2[大,九]",
+  track-empty: "a[大,]",
+  track-comma: "g[大，九]",
+  track-unclosed: "g[大,a[九]",
+  track-nesting: "a[g[大,九]]",
+  track-placeholder: "g[大,_]",
+  track-old-braces: "g{大,九}",
 )
 #if case in track-cases {
   let adapter = init-track()
@@ -22,9 +23,6 @@
   init(style: "../kai")
 } else if case == "invalid-fonts" {
   init(fallback-fonts: ())
-} else if case == "missing" {
-  let jianzi = init()
-  jianzi("大龘")
 } else {
   let instance = plugin.transition(base.init, library)
   if case == "invalid-utf8" {
