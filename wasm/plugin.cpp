@@ -92,7 +92,10 @@ int render_natural(std::size_t size) {
   if (!paths) return failure(*paths.GetError());
   auto svg = jianzi::render_svg(*paths.GetValue());
   if (!svg) return failure(*svg.GetError());
-  const auto& source = *svg.GetValue();
+  const auto& rendered = *svg.GetValue();
+  const auto& source = rendered.source;
   return result({{"status", "renderable"},
+                 {"bounds", {{"left", rendered.left}, {"top", rendered.top},
+                             {"width", rendered.width}, {"height", rendered.height}}},
                  {"svg", nlohmann::json::binary(std::vector<std::uint8_t>(source.begin(), source.end()))}});
 }

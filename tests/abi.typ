@@ -19,10 +19,15 @@
   let result = render(input)
   assert.eq(result.status, "renderable", message: input)
   assert(type(result.svg) == bytes)
-  assert(str(result.svg).contains("viewBox=\"0 0 1 1\""))
+  assert(result.bounds.left <= 0 and result.bounds.top <= 0)
+  assert(result.bounds.left + result.bounds.width >= 1)
+  assert(result.bounds.top + result.bounds.height >= 1)
   assert(str(result.svg).contains("M "))
   assert.eq(instance.render_natural(bytes(input)), instance.render_natural(bytes(input)))
 }
+#let overhanging = render("散勾一")
+#assert(overhanging.bounds.top + overhanging.bounds.height > 1)
+#assert(not str(overhanging.svg).contains("viewBox=\"0 0 1 1\""))
 // Two independent transitions from the same base must not share state.
 // Change only the metrics and add an alias in a derived test library.
 #let second-library = library

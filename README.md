@@ -47,6 +47,8 @@ D:/tools/typst/typst.exe compile --root . examples/basic.typ build/basic.pdf
 
 ## 附属 track 适配器
 
+少数笔画会超出标准字位。SVG 视口按路径范围扩展并补偿绘制位置，避免底部等边缘被裁切；字号、基线和 `1em` 排版字位保持不变。更新此实现时须同时重新构建 WASM，不能只复制 Typst 入口。
+
 Typst 暂无原生自定义 warning 接口，缺失组件的提醒通过空文本的不存在字体诊断实现，因此控制台会带有 `unknown font family: [jianzi warning] ...` 前缀。这不会阻止生成文档，也不依赖用户安装某种占位字体；方框和叉均使用矢量线条绘制。此容错仅针对 `missing` 状态，解析错误、无效配置及 WASM 调用失败仍会报错。
 
 `init-track(style: "kai", fallback-fonts: recommended-fallback-fonts, height: 2em)` 初始化单字渲染器，返回不依赖简谱包的描述字典：
@@ -56,7 +58,7 @@ Typst 暂无原生自定义 warning 接口，缺失组件的提醒通过空文�
 #let adapter = init-track()
 ```
 
-字典提供 `parse`、`render-item` 和默认 `height: 2em`，可直接注册到支持此协议的排版包：
+字典提供 `parse`、`render-item`、默认 `height: 2em` 和 `gap: 0em`，可直接注册到支持此协议的排版包。不同音符下的减字盒之间不额外留最小间隙，但仍保留盒宽避让并跟随旋律对齐；`g[...]` 内部成员间距不变：
 
 可用 `init-track(height: 1.8em)` 调整整体高度。接入 `jianpu` 时，`em` 相对于简谱字号；也可传入 `24pt` 等绝对长度。宽度随高度等比缩放，单字注释仍为普通减字的一半大小。
 
@@ -82,7 +84,7 @@ Typst 暂无原生自定义 warning 接口，缺失组件的提醒通过空文�
 
 `(adapter.parse)(source)` 返回语义数据数组，`none` 表示占位。`(adapter.render-item)(data)` 必须在 Typst context 内调用，返回 `(body: box, anchor-x: length)`；它完成 SVG/fallback 混合排版，盒高固定为内部基准 `20pt`，锚点是相对盒左缘的缩放前坐标。使用者通常只需要将适配器交给简谱包。
 
-简谱包按 `height` 缩放整个盒子及锚点。单字注释填充下半部，宽度为缩小后的实际宽度；多字注释占完整高度，竖向间隙为基准盒高的 `0.04` 倍。横向组内间隙为基准盒高的 `0.08` 倍。fallback 与 SVG 使用相同字号及 em 字位，保留原生字宽，不按笔画边界逐字放大。基础单字 `init()` 接口保持不变。
+简谱包按 `height` 缩放整个盒子及锚点。单字注释填充下半部，宽度为缩小后的实际宽度；多字注释占完整高度，竖向间隙为基准盒高的 `0.04` 倍。横向组内成员按盒宽紧邻排列，不额外添加间隙。fallback 与 SVG 使用相同字号及 em 字位，保留原生字宽，不按笔画边界逐字放大。基础单字 `init()` 接口保持不变。
 
 ## 打包
 

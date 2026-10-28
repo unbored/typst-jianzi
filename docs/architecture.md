@@ -158,7 +158,7 @@ render_natural(text_utf8: bytes) -> render_result_cbor: bytes
 
 ```text
 (status: "empty")
-(status: "renderable", svg: bytes)
+(status: "renderable", svg: bytes, bounds: (left: float, top: float, width: float, height: float))
 (status: "fallback", text: str)
 (status: "missing", names: array<str>)
 ```
@@ -360,9 +360,9 @@ JianziNote 字库已经包含所需的 `units_per_em` 和 `baseline_y`。`baseli
 
 归一化变换是字库内部实现细节，不能改变最终排版度量。Typst 侧也不能用减字的 tight bounding box 重新缩放或居中，否则不同减字会在同一行中产生不一致的视觉字号和基线。
 
-当前 `RenderPath()` 已按 `(point - translate) / scale` 恢复字库记录的 glyph normalization。实现阶段需要用参考字体样本验证恢复后的坐标范围，并据此修改 SVG viewBox；现有 `SvgRenderer` 固定使用 `viewBox="0 0 1 1"`，只有在恢复后的 em 坐标仍以 `0..1` 表示时才可原样复用。
+当前 `RenderPath()` 已按 `(point - translate) / scale` 恢复字库记录的 glyph normalization。部分笔画会超出 `0..1` 字位，例如“散勾一”的勾底超过 `1em`。WASM 将完整 em 字位与所有路径端点、控制点的范围取并集作为 SVG viewBox，并返回 `bounds`。贝塞尔曲线位于控制点凸包内，因此该范围可保守覆盖全部笔画。Typst 按 `bounds.width/height * em` 绘制图片，以 `bounds.left/top * em` 偏移放置；外层字位仍是 `1em`，不因单字边界重新缩放，也不改变基线。
 
-第一版消费的 kai 字库将原始坐标记录为 em 单位：`units_per_em=1000`、`baseline_y=860`，而 `glyph_normalization.scale≈0.969697`、`translate_y≈-0.0612121`。因此路径恢复后仍使用 em 坐标，SVG viewBox 固定为 `0 0 1 1`；字体度量则用 `baseline_y / units_per_em` 得到 0.86em 基线位置。不能将路径坐标与字体原始 units 混用，不能仅因 `units_per_em=1000` 就改为 1000 大小的 viewBox。后续风格字库也必须遵守这个坐标约定。
+第一版消费的 kai 字库将原始坐标记录为 em 单位：`units_per_em=1000`、`baseline_y=860`，而 `glyph_normalization.scale≈0.969697`、`translate_y≈-0.0612121`。路径恢复后仍使用 em 坐标，字体度量用 `baseline_y / units_per_em` 得到 0.86em 基线位置。不能将路径坐标与字体原始 units 混用，不能仅因 `units_per_em=1000` 就改为 1000 大小的 viewBox。后续风格字库也必须遵守这个坐标约定。
 
 方形字位模型要求 `0 <= baseline_y <= units_per_em`，初始化时验证这一条件。内联 SVG 能继承字号与额外基线偏移，但不参与普通 glyph 的连字、字距、字体替换等 shaping；Fallback 为真实文字，使用 Typst 原生文字度量。完整参考字体行高行为（例如 text top/bottom edge）仍需参考字体样本验证，不能仅凭 em 方框宣称所有排版行为完全相同。
 
@@ -370,7 +370,7 @@ JianziNote 字库已经包含所需的 `units_per_em` 和 `baseline_y`。`baseli
 
 `init-track()` 复用同一单字渲染器，返回 `(parse: function, render-item: function, height: 2em)`。`track.typ` 解析整段 raw，按顶层空白划分项，`_` 为占位；`a[...]` 竖排最多四个注释成员，`gN[...]` 横排并按零起算索引指定参考成员，`g[...]` 等同于 `g0[...]`。只支持 `a` 嵌套于 `g`，分隔符为 ASCII 逗号。
 
-`parse` 返回语义数据数组，`render-item` 在 Typst context 中返回 `(body: box, anchor-x: length)`。所有整体盒高固定为内部基准 `20pt`；单字注释占下半部并贴底，多字注释组占完整盒高。横向组按实际成员宽度计算参考中心。注释组内间隙为盒高 `0.04` 倍，横向组间隙为盒高 `0.08` 倍。
+`parse` 返回语义数据数组，`render-item` 在 Typst context 中返回 `(body: box, anchor-x: length)`。所有整体盒高固定为内部基准 `20pt`；单字注释占下半部并贴底，多字注释组占完整盒高。横向组按实际成员宽度计算参考中心。注释组内间隙为盒高 `0.04` 倍，横向组成员按盒宽紧邻排列，不额外添加间隙。
 
 基础 renderer 的 SVG 与真实文字 fallback 均被复用：两者使用相同字号及字库提供的 ascent/descent 字位，fallback 保留原生字宽，不按每个字符的笔画高度放大。Typst 的数值 bottom-edge 使用负 descent，使普通成员盒高为完整 1em。组合器不假定全部成员都是图片或全角字符。所有缩放均影响实际占位，基线不作为组合底边对齐标准。调用方按目标高度缩放整个盒子及锚点，不向适配器传入简谱字号。
 

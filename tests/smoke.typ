@@ -6,6 +6,8 @@
 普通文字与减字：大 #jianzi("大") 九 #jianzi("九")，
 组合 #jianzi("大九") #jianzi("大九挑七") #jianzi("名十一中食抹一")。
 
+字位外笔画不裁切：#jianzi("散勾一")。
+
 #text(size: 10pt)[小号文字 #jianzi("大九挑七")。]
 
 #text(size: 28pt)[大号文字 #jianzi("大九挑七")。]
@@ -27,6 +29,8 @@ Fallback：#text(fill: red)[#jianzi("琴")]；空输入：甲#jianzi("")乙。
 #context {
   assert.eq(measure(jianzi("大九")).width, text.size)
   assert.eq(measure(jianzi("大九")).height, text.size)
+  assert.eq(measure(jianzi("散勾一")).width, text.size)
+  assert.eq(measure(jianzi("散勾一")).height, text.size)
   assert.eq(measure(jianzi("")).width, 0pt)
   assert.eq(measure(jianzi("大龘")).width, text.size)
   assert.eq(measure(jianzi("大龘")).height, text.size)

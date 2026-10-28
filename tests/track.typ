@@ -4,6 +4,7 @@
 #set text(font: "STKaiti", size: 16pt)
 #let adapter = init-track(fallback-fonts: ("STKaiti", "KaiTi"))
 #assert.eq(adapter.height, 2em)
+#assert.eq(adapter.gap, 0em)
 #assert.eq(init-track(height: 1.8em).height, 1.8em)
 #assert.eq(init-track(height: 24pt).height, 24pt)
 #let parse = adapter.parse
@@ -23,6 +24,8 @@
     assert(item.anchor-x > 0pt and item.anchor-x < bounds.width)
   }
   let normal = render-item(parse("大九").first())
+  let overhanging = render-item(parse("散勾一").first())
+  assert.eq(measure(overhanging.body), measure(normal.body))
   let missing = render-item(parse("大龘").first())
   assert.eq(measure(missing.body), measure(normal.body))
   for source in ("a[大龘]", "a[大九,大龘]", "g1[大九,大龘]") {
@@ -35,13 +38,15 @@
     assert.eq(measure(fallback.body).width, measure(normal.body).width)
   }
   let mixed = render-item(parse("g[大九,琴]").first())
-  assert.eq(measure(mixed.body).width, 20pt * 2 + 20pt * 0.08)
+  assert.eq(measure(mixed.body).width, 20pt * 2)
   let annotation = render-item(parse("a[大九]").first())
   assert.eq(measure(annotation.body).width, measure(normal.body).width / 2)
   let first = render-item(parse("g[大九,琴]").first())
   let second = render-item(parse("g1[大九,琴]").first())
   assert.eq(measure(first.body).width, measure(second.body).width)
   assert(second.anchor-x > first.anchor-x)
+  assert.eq(first.anchor-x, 10pt)
+  assert.eq(second.anchor-x, 30pt)
   for source in (
     "a[大九,九]", "a[大九,九,大九]", "a[大九,九,大九,九]",
     "a[琴,甲]", "a[琴,甲,琴]", "a[琴,甲,琴,甲]",

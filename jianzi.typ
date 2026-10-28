@@ -48,11 +48,14 @@
     } else if result.status == "renderable" {
       context {
         let em = text.size
+        let bounds = result.bounds
         box(
           width: metrics.advance * em,
           height: em,
           baseline: metrics.descent * em + text.baseline,
-          image(result.svg, format: "svg", width: em, height: em, alt: input),
+          place(top + left, dx: bounds.left * em, dy: bounds.top * em,
+            image(result.svg, format: "svg", width: bounds.width * em,
+              height: bounds.height * em, alt: input)),
         )
       }
     } else {
@@ -70,5 +73,5 @@
 #let init-track(style: "kai", fallback-fonts: recommended-fallback-fonts, height: 2em) = {
   assert(type(height) == length, message: "jianzi: track height must be a length")
   let renderer = initialize-renderer(style: style, fallback-fonts: fallback-fonts)
-  (..make-track(renderer.render, renderer.metrics.descent), height: height)
+  (..make-track(renderer.render, renderer.metrics.descent), height: height, gap: 0em)
 }

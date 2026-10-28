@@ -66,7 +66,6 @@
   // All outputs have this fixed height, even a half-height annotation. The
   // score renderer scales the whole box; it must not trim its empty upper half.
   let unit = 20pt
-  let horizontal-gap = unit * 0.08
   let vertical-gap = unit * 0.04
 
   let render-member(data) = {
@@ -108,16 +107,16 @@
       assert(data.kind == "horizontal", message: "jianzi track: invalid item kind")
       let members = data.members.map(render-member)
       let widths = members.map(member => measure(member.body).width)
-      let width = widths.fold(0pt, (total, value) => total + value) + horizontal-gap * (members.len() - 1)
+      let width = widths.fold(0pt, (total, value) => total + value)
       let anchor = 0pt
       let body = box(width: width, height: unit, baseline: 0pt)[
         #let offset-x = 0pt
         #for (index, member) in members.enumerate() {
           place(top + left, dx: offset-x, member.body)
-          offset-x += widths.at(index) + horizontal-gap
+          offset-x += widths.at(index)
         }
       ]
-      for index in range(data.reference) { anchor += widths.at(index) + horizontal-gap }
+      for index in range(data.reference) { anchor += widths.at(index) }
       anchor += members.at(data.reference).anchor-x
       (body: body, anchor-x: anchor)
     }
